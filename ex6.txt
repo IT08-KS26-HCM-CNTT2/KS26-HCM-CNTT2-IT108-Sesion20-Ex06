@@ -1,0 +1,84 @@
+BÀI TẬP 6: NGĂN CHẶN RÒ RỈ THÔNG TIN BÍ MẬT TRÊN GITHUB
+1. PRE-PUSH CHECKLIST (QUY TRÌNH KIỂM TRA TRƯỚC KHI PUSH)
+Để đảm bảo mã nguồn hoàn toàn sạch sẽ trước khi đưa lên kho lưu trữ công khai (GitHub Public), toàn bộ thành viên trong nhóm phải tuân thủ nghiêm ngặt 3 lớp kiểm tra sau:
+  1.1. Kiểm tra và cố định tệp .gitignore
+  - Mục đích: Ngăn chặn tuyệt đối các tệp chứa thông tin nhạy cảm lọt vào danh mục tracked files của Git.
+  - Các thành phần bắt buộc đưa vào .gitignore:
+    + Thư mục chứa biến môi trường: .env, .env.local, .env.*.local
+    + Thư mục phụ thuộc và build: node_modules/, vendor/, dist/, build/, .next/
+    + Tệp nhật ký log và hệ điều hành: *.log, npm-debug.log*, .DS_Store, Thumbs.db
+    + Thư mục cấu hình IDE cục bộ: .idea/, .vscode/ (ngoại trừ các extension dùng chung nhóm)
+  1.2. Tự động hóa quét mã với Git Hooks (Pre-push Hook) & Trufflehog/Git-secrets
+  - Cấu hình tệp .git/hooks/pre-push (hoặc sử dụng thư viện Husky):
+    + Viết một script bash nhỏ chạy tự động trước mỗi lệnh `git push`.
+    + Sử dụng công cụ quét (như Trufflehog hoặc Git-secrets) để quét toàn bộ các commit chuẩn bị đẩy lên xem có chứa chuỗi ký tự dạng khóa bí mật hay không (ví dụ: các chuỗi bắt đầu bằng sk_live_, AKIA, AIzaSy, v.v.).
+    + Nếu phát hiện chuỗi nghi ngờ, terminal sẽ lập tức từ chối lệnh push và thông báo dòng mã vi phạm.
+  1.3. Rà soát thủ công cuối cùng (Manual Review)
+  - Trước khi gõ lệnh push, bắt buộc thực hiện các lệnh kiểm tra:
+    + `git status`: Kiểm tra xem có tệp `.env` nào đang ở trạng thái untracked hoặc staged hay không.
+    + `git diff --cached`: Đọc lướt qua các dòng code sắp được đưa vào commit để chắc chắn không dính các đoạn hardcode API key hoặc password test tạm thời.
+2. CẤU TRÚC TỆP .ENV.EXAMPLE CHUYÊN NGHIỆP
+Tệp .env.example đóng vai trò là "bản thiết kế" cấu hình cho toàn đội ngũ phát triển. File này được đưa lên Git Public nhưng CHỈ CHỨA GIÁ TRỊ MẪU (Placeholder), tuyệt đối không chứa thông tin thật.
+ CẤU HÌNH ỨNG DỤNG (APP CONFIG)
+APP_NAME="E-Commerce Platform"
+APP_ENV=development # Giá trị: development | testing | production
+APP_KEY=base64:your_generated_app_key_here
+APP_DEBUG=true
+APP_URL=http://localhost:3000
+ CƠ SỞ DỮ LIỆU (DATABASE CONFIG)
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=ecommerce_dev
+DB_USERNAME=root
+DB_PASSWORD=your_local_db_password_here
+ CỔNG THANH TOÁN (PAYMENT GATEWAYS)
+ (Lưu ý: Luôn sử dụng Key Sandbox / Test khi ở môi trường Dev)
+STRIPE_KEY=pk_test_sample_stripe_key_placeholder
+STRIPE_SECRET=sk_test_sample_stripe_secret_placeholder
+VNPAY_TMN_CODE=SAMPLE_TMN_CODE
+VNPAY_HASH_SECRET=SAMPLE_HASH_SECRET
+ DỊCH VỤ EMAIL & THÔNG BÁO (MAIL CONFIG)
+MAIL_MAILER=smtp
+MAIL_HOST=smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_FROM_ADDRESS="no-reply@ecommerce.local"
+MAIL_FROM_NAME="${APP_NAME}"
+3. HƯỚNG DẪN KÍCH HOẠT 2FA BẮT BUỘC CHO REPOSITORY
+Để bảo vệ mã nguồn dự án khỏi các cuộc tấn công chiếm đoạt tài khoản thành viên, quản trị viên và các thành viên cần thiết lập xác thực hai lớp (Two-Factor Authentication - 2FA) theo quy trình:
+  3.1. Đối với từng cá nhân thành viên:
+  - Truy cập GitHub -> Click vào ảnh đại diện (góc trên bên phải) -> **Settings**.
+  - Chọn mục **Password and authentication**.
+  - Tìm phần **Two-factor authentication** và nhấn **Enable two-factor authentication**.
+  - Quét mã QR bằng ứng dụng xác thực (Google Authenticator, Authy, hoặc GitHub Mobile) và nhập mã OTP xác nhận hoàn tất.
+  3.2. Đối với Quản trị viên (Thiết lập chính sách bắt buộc cho Repository/Organization):
+  - Truy cập vào trang quản trị của Organization hoặc Repository trên GitHub.
+  - Vào **Settings** -> Mục **Member privileges** (hoặc **Security**).
+  - Tìm đến phần **Two-factor authentication**.
+  - Tích chọn hộp: **Require two-factor authentication for everyone in this organization**.
+  - Lưu thay đổi (**Save**). 
+  Hệ thống sẽ tự động gửi thông báo yêu cầu các thành viên chưa bật 2FA phải kích hoạt xác thực 2 lớp mới được tiếp tục quyền truy cập hoặc push code lên repository.
+4. BÁO CÁO ĐÁNH GIÁ RỦI RO KHI THIẾU TỆP .GITIGNORE
+Nếu nhóm bỏ sót hoặc cấu hình sai tệp `.gitignore`, dẫn đến việc vô tình đẩy các file cấu hình thật (`.env`, `config.json`, v.v.) lên GitHub Public, dự án sẽ đối mặt với các mức độ rủi ro nghiêm trọng sau đây:
+  4.1. Lộ API Keys & Secret Keys thanh toán (Stripe, VNPay, Momo)
+  - Mức độ nguy hiểm: NGHIÊM TRỌNG (CRITICAL)
+  - Tác động thực tế: Các bot tự động quét mã nguồn trên GitHub (GitHub Secret Scanning bots) sẽ lập tức phát hiện khóa bí mật (Secret Key) chỉ trong vài giây. Kẻ tấn công có thể chiếm quyền cổng thanh toán để thực hiện các giao dịch gian lận, rút tiền hoặc làm tê liệt tài chính dự án.
+  - Cách khắc phục khẩn cấp: Ngay lập tức thu hồi (Revoke) key cũ trên trang quản trị của nhà cung cấp thanh toán, tạo key mới và cập nhật lại biến môi trường qua kênh bảo mật nội bộ.
+  4.2. Lộ thông tin kết nối Cơ sở dữ liệu (Database Credentials)
+  - Mức độ nguy hiểm: NGHIÊM TRỌNG (CRITICAL)
+  - Tác động thực tế: Tin tặc có thể kết nối trực tiếp vào máy chủ cơ sở dữ liệu (nếu cấu hình mở cổng public IP), tiến hành đánh cắp toàn bộ thông tin cá nhân khách hàng (thông tin định danh, lịch sử giao dịch), hoặc chạy lệnh xóa sạch cơ sở dữ liệu (SQL Injection / Drop database).
+  - Cách khắc phục khẩn cấp: Thay đổi mật khẩu tài khoản database ngay lập tức, cấu hình lại tường lửa (firewall/Security Groups) chỉ cho phép các IP nội bộ hoặc môi trường production được kết nối.
+  4.3. Ô nhiễm lịch sử Git (Git History Pollution)
+  - Mức độ nguy hiểm: CAO (HIGH)
+  - Tác động thực tế: Ngay cả khi lập trình viên phát hiện lỗi, xóa file `.env` và tạo một commit mới đè lên, thông tin nhạy cảm **vẫn tồn tại vĩnh viễn** trong lịch sử commit cũ của Git (`git log`). Bất kỳ ai cũng có thể dùng lệnh `git log -p` hoặc các công cụ khôi phục để đọc lại thông tin cũ.
+  - Cách khắc phục: Phải sử dụng các công cụ chuyên dụng để làm sạch lịch sử như `git-filter-repo` hoặc `BFG Repo-Cleaner`, sau đó thực hiện lệnh ép đẩy (`git push origin main --force`), việc này rất rủi ro nếu team đang làm việc đông người.
+  4.4. Phát sinh chi phí dịch vụ Cloud và Công cụ bên thứ ba
+  - Mức độ nguy hiểm: CAO (HIGH)
+  - Tác động thực tế: Các khóa API dịch vụ gửi email (Mailgun, SendGrid) hoặc dịch vụ lưu trữ đám mây (AWS S3, Google Cloud) bị lợi dụng để chạy các tác vụ spam hoặc khai thác tài nguyên trái phép, gây thiệt hại tài chính lớn cho doanh nghiệp.
+KẾT LUẬN CHung:
+Tệp .gitignore kết hợp với Pre-push Checklist là "tuyến phòng thủ đầu 
+tiên" mang tính quyết định. Việc thiết lập đúng đắn từ đầu giúp bảo 
+vệ hoàn toàn uy tín, an toàn dữ liệu và tài chính cho dự án thương mại 
+điện tử trước khi mở công khai cho đối tác kiểm tra.
